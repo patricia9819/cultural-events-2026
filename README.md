@@ -141,7 +141,7 @@
         function calendarApp() {
             return {
                 // ⚠️ 請務必將下方網址換成您部署後的 Google Apps Script 網址 ⚠️
-                API_URL: 'https://script.google.com/macros/s/AKfycbwlsGCz9PS-WFvNC8x4rvZ8_CiswvqR2ngByQDe-_I1s_6GmpNmqJeTKi2KsaTwB1fa/exec', 
+                API_URL: 'https://script.google.com/macros/s/AKfycbxgA-VXlhcxv0MG4qcIqJkC2zY4pIe6IWCVRlzkfdGDXq98zw81YqM5s0X5gtvzSlg1Mw/exec', 
                 
                 currentDate: new Date(2026, 0, 20),
                 selectedDate: '2026-01-20',
@@ -171,7 +171,7 @@
                 },
 
                 init() {
-                    if (this.API_URL === 'YOUR_GOOGLE_SCRIPT_URL') {
+                    if (this.API_URL === 'https://script.google.com/macros/s/AKfycbxgA-VXlhcxv0MG4qcIqJkC2zY4pIe6IWCVRlzkfdGDXq98zw81YqM5s0X5gtvzSlg1Mw/exec') {
                         alert("請先設定 Google Apps Script 網址，否則無法同步！");
                         // 載入預設資料作為展示
                         this.loadLocalMockData();
