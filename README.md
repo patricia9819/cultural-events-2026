@@ -197,32 +197,36 @@
                     }
                 },
 
-                // 寫入資料到 Google Sheet
-                async saveData() {
-                    this.isLoading = true;
-                    try {
-                        // 使用 fetch POST
-                        await fetch(this.API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors', // Google Apps Script POST 需要 no-cors
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.events)
-                        });
-                        
-                        // 因為 no-cors 不會回傳結果，我們假設成功並重新讀取確保一致
-                        // 等待 1 秒讓 Google Sheet 寫入完成
-                        setTimeout(() => {
-                            this.fetchData(); 
-                            this.showModal = false;
-                            alert("儲存成功！");
-                        }, 1000);
-                        
-                    } catch (error) {
-                        console.error("儲存失敗", error);
-                        alert("儲存失敗");
-                        this.isLoading = false;
-                    }
-                },
+                // 寫入資料到 Google Sheet (V11.1 修正版)
+saveData() {
+    this.isLoading = true;
+    
+    // 這裡一定要用您重新部署後取得的最新網址
+    const url = this.API_URL; 
+
+    // 使用 fetch，但不加 headers，讓它變成 "Simple Request"
+    fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(this.events) // 直接傳送字串
+    })
+    .then(response => response.json())
+    .then(data => {
+        this.isLoading = false;
+        if (data.result === 'success') {
+            this.showModal = false;
+            alert("✅ 雲端存檔成功！");
+        } else {
+            alert("❌ 存檔失敗：" + (data.error || "未知錯誤"));
+        }
+    })
+    .catch(error => {
+        this.isLoading = false;
+        console.error("Error:", error);
+        // 即使發生錯誤，通常如果是 no-cors 導致的，資料其實已經寫進去了
+        // 建議去 Google Sheet 確認一下
+        alert("⚠️ 連線異常，請確認：\n1. 網址是否正確\n2. 部署權限是否為「所有人」");
+    });
+},
 
                 loadLocalMockData() {
                     // 這裡放原本的靜態資料，當作未連線時的範本
