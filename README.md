@@ -200,37 +200,35 @@
                 // V12 修正版：強制發送模式 (解決 Vercel 無法存檔問題)
 saveData() {
     this.isLoading = true;
-    const url = this.API_URL'https://script.google.com/macros/s/AKfycbzqb9pg1cZGRMW4Pjgzmq4ljJPhaiLWs7m_9MMPpsuIrQPlgWgD2Bpvza4tIAp5-jhHmQ/exec';
+    const url = this.API_URL:'https://script.google.com/macros/s/AKfycbzqb9pg1cZGRMW4Pjgzmq4ljJPhaiLWs7m_9MMPpsuIrQPlgWgD2Bpvza4tIAp5-jhHmQ/exec';
 
-    // 將資料轉為 JSON 字串
-    const payload = JSON.stringify(this.events);
+    // 將資料轉為字串並封裝進表單欄位 "data"
+    const formData = new URLSearchParams();
+    formData.append('data', JSON.stringify(this.events));
 
     fetch(url, {
         method: 'POST',
-        mode: 'no-cors', // 關鍵：跳過跨域檢查
-        cache: 'no-cache',
+        mode: 'no-cors', // 繞過 CORS 檢查
         headers: {
-            // 注意：不要設定任何複雜的 Header，這會觸發 CORS 預檢
-            'Content-Type': 'text/plain' 
+            'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: payload
+        body: formData.toString()
     })
     .then(() => {
-        // no-cors 下無法獲取回傳內容，我們假設發送成功
+        // no-cors 模式下瀏覽器會顯示回應失敗，但資料其實已送達
         this.isLoading = false;
         this.showModal = false;
-        alert("✅ 資料已同步至 Google 雲端！\n(請重新整理頁面確認更新)");
+        alert("✅ 指令已送出！請稍候 3-5 秒讓 Google 雲端更新資料。");
         
-        // 延遲刷新本地資料
-        setTimeout(() => { this.fetchData(); }, 2000);
+        // 延遲刷新本地顯示
+        setTimeout(() => { this.fetchData(); }, 4000);
     })
     .catch(error => {
         this.isLoading = false;
         console.error("同步失敗:", error);
-        alert("⚠️ 同步失敗，請確認網路連線。");
+        alert("⚠️ 網路連線異常，同步失敗。");
     });
 }
-
                 loadLocalMockData() {
                     // 這裡放原本的靜態資料，當作未連線時的範本
                     this.events = [
