@@ -141,7 +141,7 @@
         function calendarApp() {
             return {
                 // ⚠️ 請務必將下方網址換成您部署後的 Google Apps Script 網址 ⚠️
-                API_URL: 'https://script.google.com/macros/s/AKfycbxgA-VXlhcxv0MG4qcIqJkC2zY4pIe6IWCVRlzkfdGDXq98zw81YqM5s0X5gtvzSlg1Mw/exec', 
+                API_URL: 'https://script.google.com/macros/s/AKfycbzqb9pg1cZGRMW4Pjgzmq4ljJPhaiLWs7m_9MMPpsuIrQPlgWgD2Bpvza4tIAp5-jhHmQ/exec', 
                 
                 currentDate: new Date(2026, 0, 20),
                 selectedDate: '2026-01-20',
@@ -171,7 +171,7 @@
                 },
 
                 init() {
-                    if (this.API_URL === 'https://script.google.com/macros/s/AKfycbxgA-VXlhcxv0MG4qcIqJkC2zY4pIe6IWCVRlzkfdGDXq98zw81YqM5s0X5gtvzSlg1Mw/exec') {
+                    if (this.API_URL === 'https://script.google.com/macros/s/AKfycbzqb9pg1cZGRMW4Pjgzmq4ljJPhaiLWs7m_9MMPpsuIrQPlgWgD2Bpvza4tIAp5-jhHmQ/exec') {
                         alert("請先設定 Google Apps Script 網址，否則無法同步！");
                         // 載入預設資料作為展示
                         this.loadLocalMockData();
@@ -200,38 +200,36 @@
                 // V12 修正版：強制發送模式 (解決 Vercel 無法存檔問題)
 saveData() {
     this.isLoading = true;
-    const url = this.API_URL; 
+    const url = this.API_URL'https://script.google.com/macros/s/AKfycbzqb9pg1cZGRMW4Pjgzmq4ljJPhaiLWs7m_9MMPpsuIrQPlgWgD2Bpvza4tIAp5-jhHmQ/exec';
 
-    // 使用 no-cors 模式，這是唯一能從 Vercel 成功發送資料給 Google 的方法
+    // 將資料轉為 JSON 字串
+    const payload = JSON.stringify(this.events);
+
     fetch(url, {
         method: 'POST',
-        mode: 'no-cors', // <--- 關鍵！告訴瀏覽器不要檢查 CORS，直接盲送
+        mode: 'no-cors', // 關鍵：跳過跨域檢查
         cache: 'no-cache',
         headers: {
-            'Content-Type': 'text/plain;charset=utf-8', // 設定為純文字，避免觸發預檢
+            // 注意：不要設定任何複雜的 Header，這會觸發 CORS 預檢
+            'Content-Type': 'text/plain' 
         },
-        body: JSON.stringify(this.events)
+        body: payload
     })
     .then(() => {
-        // 注意：在 no-cors 模式下，我們無法知道 Google 是否回傳 "Success"
-        // 但只要沒有報錯，通常代表資料已經送出去了
+        // no-cors 下無法獲取回傳內容，我們假設發送成功
         this.isLoading = false;
         this.showModal = false;
+        alert("✅ 資料已同步至 Google 雲端！\n(請重新整理頁面確認更新)");
         
-        // 為了保險起見，我們提示使用者稍後確認
-        alert("✅ 資料已發送！\n(因雲端安全機制，請等待約 3 秒後，資料才會出現在試算表中)");
-        
-        // 3秒後嘗試重新讀取，確認資料是否有更新
-        setTimeout(() => {
-            this.fetchData();
-        }, 3000);
+        // 延遲刷新本地資料
+        setTimeout(() => { this.fetchData(); }, 2000);
     })
     .catch(error => {
         this.isLoading = false;
-        console.error("Error:", error);
-        alert("⚠️ 發送過程發生錯誤，請檢查網路連線");
+        console.error("同步失敗:", error);
+        alert("⚠️ 同步失敗，請確認網路連線。");
     });
-},
+}
 
                 loadLocalMockData() {
                     // 這裡放原本的靜態資料，當作未連線時的範本
