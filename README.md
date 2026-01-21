@@ -197,34 +197,39 @@
                     }
                 },
 
-                // 寫入資料到 Google Sheet (V11.1 修正版)
+                // V12 修正版：強制發送模式 (解決 Vercel 無法存檔問題)
 saveData() {
     this.isLoading = true;
-    
-    // [這裡一定要用您重新部署後取得的最新網址](https://script.google.com/macros/s/AKfycbxgA-VXlhcxv0MG4qcIqJkC2zY4pIe6IWCVRlzkfdGDXq98zw81YqM5s0X5gtvzSlg1Mw/exec)
     const url = this.API_URL; 
 
-    // 使用 fetch，但不加 headers，讓它變成 "Simple Request"
+    // 使用 no-cors 模式，這是唯一能從 Vercel 成功發送資料給 Google 的方法
     fetch(url, {
         method: 'POST',
-        body: JSON.stringify(this.events) // 直接傳送字串
+        mode: 'no-cors', // <--- 關鍵！告訴瀏覽器不要檢查 CORS，直接盲送
+        cache: 'no-cache',
+        headers: {
+            'Content-Type': 'text/plain;charset=utf-8', // 設定為純文字，避免觸發預檢
+        },
+        body: JSON.stringify(this.events)
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(() => {
+        // 注意：在 no-cors 模式下，我們無法知道 Google 是否回傳 "Success"
+        // 但只要沒有報錯，通常代表資料已經送出去了
         this.isLoading = false;
-        if (data.result === 'success') {
-            this.showModal = false;
-            alert("✅ 雲端存檔成功！");
-        } else {
-            alert("❌ 存檔失敗：" + (data.error || "未知錯誤"));
-        }
+        this.showModal = false;
+        
+        // 為了保險起見，我們提示使用者稍後確認
+        alert("✅ 資料已發送！\n(因雲端安全機制，請等待約 3 秒後，資料才會出現在試算表中)");
+        
+        // 3秒後嘗試重新讀取，確認資料是否有更新
+        setTimeout(() => {
+            this.fetchData();
+        }, 3000);
     })
     .catch(error => {
         this.isLoading = false;
         console.error("Error:", error);
-        // 即使發生錯誤，通常如果是 no-cors 導致的，資料其實已經寫進去了
-        // 建議去 Google Sheet 確認一下
-        alert("⚠️ 連線異常，請確認：\n1. 網址是否正確\n2. 部署權限是否為「所有人」");
+        alert("⚠️ 發送過程發生錯誤，請檢查網路連線");
     });
 },
 
