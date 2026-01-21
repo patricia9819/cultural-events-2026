@@ -185,7 +185,7 @@
                 async fetchData() {
                     this.isLoading = true;
                     try {
-                        const res = await fetch(this.API_URL);
+                        const res = await fetch(this.API_URL:'https://script.google.com/macros/s/AKfycbzqb9pg1cZGRMW4Pjgzmq4ljJPhaiLWs7m_9MMPpsuIrQPlgWgD2Bpvza4tIAp5-jhHmQ/exec');
                         const data = await res.json();
                         this.events = data;
                         console.log("資料同步成功", data);
