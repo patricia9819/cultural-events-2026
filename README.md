@@ -1,1 +1,453 @@
-# cultural-events-2026
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>115年文化局活動管考系統 (V8儀表板)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f1f5f9; }
+        
+        /* 網格設定 */
+        .calendar-grid { 
+            display: grid; 
+            grid-template-columns: repeat(7, minmax(0, 1fr)); 
+            gap: 1px; 
+            background-color: #cbd5e1; 
+            border: 1px solid #cbd5e1; 
+        }
+        
+        .calendar-cell { 
+            background-color: white; 
+            min-height: 100px; 
+            position: relative; 
+            cursor: pointer; 
+            transition: all 0.1s; 
+            overflow: hidden; 
+        }
+        
+        .calendar-cell:hover { background-color: #f8fafc; }
+        .calendar-cell.active { background-color: #eff6ff; box-shadow: inset 0 0 0 2px #3b82f6; }
+        
+        .event-bar { 
+            font-size: 0.75rem; 
+            padding: 1px 4px; 
+            margin-bottom: 2px; 
+            border-radius: 3px; 
+            white-space: normal; 
+            word-break: break-word; 
+            line-height: 1.25; 
+            font-weight: 600; 
+            border-left-width: 3px;
+        }
+        
+        /* 側邊欄捲軸美化 */
+        .sidebar-scroll::-webkit-scrollbar { width: 6px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        [x-cloak] { display: none !important; }
+        
+        @media (max-width: 640px) {
+            .calendar-cell { min-height: 70px; }
+            .event-bar { font-size: 10px; padding: 1px 2px; line-height: 1.1; }
+        }
+    </style>
+</head>
+<body x-data="calendarApp()" x-init="init()" class="text-gray-800 pb-24">
+
+    <header class="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
+        <div class="max-w-[1600px] mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-lg font-bold text-gray-800 flex items-center">
+                <i class="fas fa-chart-line text-blue-600 mr-2"></i>
+                <span class="hidden sm:inline">文化局活動管考 (V8)</span>
+                <span class="sm:hidden">管考系統</span>
+            </h1>
+            
+            <div class="flex items-center bg-gray-100 rounded-lg p-0.5">
+                <button @click="changeMonth(-1)" class="p-2 hover:bg-gray-200 rounded-md text-gray-600"><i class="fas fa-chevron-left"></i></button>
+                <span class="px-2 sm:px-4 font-bold text-lg min-w-[100px] text-center" x-text="formatMonthYear()"></span>
+                <button @click="changeMonth(1)" class="p-2 hover:bg-gray-200 rounded-md text-gray-600"><i class="fas fa-chevron-right"></i></button>
+            </div>
+
+            <button @click="resetToToday()" class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm font-bold hover:bg-blue-100 transition border border-blue-200">
+                今天
+            </button>
+        </div>
+        
+        <div class="max-w-[1600px] mx-auto px-4 py-2 flex gap-3 overflow-x-auto text-xs whitespace-nowrap scrollbar-hide border-t border-gray-100 bg-gray-50 items-center h-10">
+            <span class="flex items-center font-bold text-purple-700"><span class="w-2.5 h-2.5 rounded-full bg-purple-600 mr-1"></span>議會</span>
+            <span class="flex items-center font-bold text-red-700"><span class="w-2.5 h-2.5 rounded-full bg-red-600 mr-1"></span>市府</span>
+            <div class="w-px h-4 bg-gray-300 mx-1"></div>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-cyan-500 mr-1"></span>市美</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 mr-1"></span>表藝</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-pink-500 mr-1"></span>視覺</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-1"></span>港藝</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1"></span>大墩</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1"></span>葫蘆墩</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-lime-500 mr-1"></span>屯藝</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-teal-500 mr-1"></span>纖維</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-stone-500 mr-1"></span>文資</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-sky-500 mr-1"></span>市圖</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1"></span>資源</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-violet-500 mr-1"></span>研究</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-gray-500 mr-1"></span>秘書</span>
+        </div>
+    </header>
+
+    <main class="max-w-[1600px] mx-auto px-4 py-6">
+        
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
+            
+            <div class="xl:col-span-3 space-y-6">
+                
+                <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+                    <div class="grid grid-cols-7 bg-gray-50 text-center py-2 border-b">
+                        <div class="text-red-500 font-bold text-sm">日</div>
+                        <div class="text-gray-500 font-bold text-sm">一</div>
+                        <div class="text-gray-500 font-bold text-sm">二</div>
+                        <div class="text-gray-500 font-bold text-sm">三</div>
+                        <div class="text-gray-500 font-bold text-sm">四</div>
+                        <div class="text-gray-500 font-bold text-sm">五</div>
+                        <div class="text-green-600 font-bold text-sm">六</div>
+                    </div>
+
+                    <div class="calendar-grid">
+                        <template x-for="day in daysInMonth" :key="day.dateStr">
+                            <div class="calendar-cell p-1" 
+                                 :class="{ 
+                                     'bg-gray-50 text-gray-400': !day.isCurrentMonth, 
+                                     'active': isSelected(day.dateStr), 
+                                     'bg-yellow-50': isToday(day.dateStr) && !isSelected(day.dateStr)
+                                 }"
+                                 @click="selectDate(day.dateStr)">
+                                
+                                <div class="flex justify-between items-start px-1 mb-1">
+                                    <span class="text-xs font-bold" x-text="day.dayNum"></span>
+                                </div>
+                                
+                                <div class="flex flex-col gap-0.5">
+                                    <template x-for="evt in getStartedEventsForDay(day.dateStr, 'council').slice(0, 1)">
+                                        <div class="event-bar bg-purple-100 text-purple-900 border-purple-600" 
+                                             x-text="getEventDisplayText(evt)"></div>
+                                    </template>
+                                    <template x-for="evt in getStartedEventsForDay(day.dateStr, 'city').slice(0, 1)">
+                                        <div class="event-bar bg-red-100 text-red-900 border-red-600 font-bold" 
+                                             x-text="getEventDisplayText(evt)"></div>
+                                    </template>
+                                    <template x-for="evt in getStartedEventsForDay(day.dateStr, 'bureau').slice(0, 3)">
+                                        <div class="event-bar" 
+                                             :class="getUnitTheme(evt.unit).bar"
+                                             x-text="getEventDisplayText(evt)"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-xl shadow-md border-t-4 border-purple-600 flex flex-col min-h-[250px]">
+                        <div class="p-3 border-b bg-purple-50 flex justify-between items-center">
+                            <h2 class="font-bold text-purple-900 text-lg flex items-center"><i class="fas fa-gavel mr-2"></i>議會行程</h2>
+                            <span class="text-xs bg-purple-200 text-purple-900 px-2 py-1 rounded font-bold" x-text="selectedDateDisplay"></span>
+                        </div>
+                        <div class="p-3 flex-1 overflow-y-auto max-h-[400px]">
+                            <template x-if="selectedDayEvents.council.length === 0">
+                                <div class="text-center text-gray-400 py-8 text-sm"><p>本日無議會行程</p></div>
+                            </template>
+                            <div class="space-y-3">
+                                <template x-for="evt in selectedDayEvents.council" :key="evt.id">
+                                    <div class="bg-white border border-purple-100 rounded-lg p-3 shadow-sm relative group">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <div class="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                                                    <span x-text="formatDateRange(evt.start, evt.end)"></span>
+                                                </div>
+                                                <h3 class="font-bold text-gray-800 text-sm" x-text="evt.title"></h3>
+                                                <div class="mt-1"><span class="text-[10px] bg-purple-600 text-white px-1.5 py-0.5 rounded">🟣 局長出席</span></div>
+                                            </div>
+                                            <button @click.stop="editEvent(evt)" class="text-gray-300 hover:text-purple-600 p-1"><i class="fas fa-pen"></i></button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md border-t-4 border-red-600 flex flex-col min-h-[250px]">
+                        <div class="p-3 border-b bg-red-50 flex justify-between items-center">
+                            <h2 class="font-bold text-red-900 text-lg flex items-center"><i class="fas fa-building mr-2"></i>市府重大活動</h2>
+                            <span class="text-xs bg-red-200 text-red-900 px-2 py-1 rounded font-bold" x-text="selectedDateDisplay"></span>
+                        </div>
+                        <div class="p-3 flex-1 overflow-y-auto max-h-[400px]">
+                            <template x-if="selectedDayEvents.city.length === 0">
+                                <div class="text-center text-gray-400 py-8 text-sm"><p>本日無市府活動</p><button @click="openModal('city')" class="mt-1 text-red-600 hover:underline">新增</button></div>
+                            </template>
+                            <div class="space-y-3">
+                                <template x-for="evt in selectedDayEvents.city" :key="evt.id">
+                                    <div class="bg-white border border-red-100 rounded-lg p-3 shadow-sm relative group border-l-4 border-l-red-500">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <div class="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                                                    <span x-text="formatDateRange(evt.start, evt.end)"></span>
+                                                </div>
+                                                <h3 class="font-bold text-gray-800 text-sm" x-text="evt.title"></h3>
+                                                <div class="mt-1"><span class="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded">🔷 市長出席</span></div>
+                                            </div>
+                                            <button @click.stop="editEvent(evt)" class="text-gray-300 hover:text-red-600 p-1"><i class="fas fa-pen"></i></button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md border-t-4 border-blue-600 flex flex-col min-h-[250px]">
+                        <div class="p-3 border-b bg-blue-50 flex justify-between items-center">
+                            <h2 class="font-bold text-gray-800 text-lg flex items-center"><i class="fas fa-palette mr-2"></i>文化局活動</h2>
+                            <span class="text-xs bg-blue-200 text-gray-800 px-2 py-1 rounded font-bold" x-text="selectedDateDisplay"></span>
+                        </div>
+                        <div class="p-3 flex-1 overflow-y-auto max-h-[400px]">
+                            <template x-if="selectedDayEvents.bureau.length === 0">
+                                <div class="text-center text-gray-400 py-8 text-sm"><p>本日無活動</p><button @click="openModal('bureau')" class="mt-1 text-blue-600 hover:underline">新增</button></div>
+                            </template>
+                            <div class="space-y-3">
+                                <template x-for="evt in selectedDayEvents.bureau" :key="evt.id">
+                                    <div class="bg-white border rounded-lg p-3 shadow-sm relative group border-l-4"
+                                         :class="[getUnitTheme(evt.unit).cardBorder, evt.highlight ? 'bg-orange-50' : 'bg-white']">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 text-xs text-gray-500 mb-1 flex-wrap">
+                                                    <span class="px-1.5 py-0.5 rounded font-bold" :class="getUnitTheme(evt.unit).badge" x-text="evt.unit"></span>
+                                                    <span x-text="formatDateRange(evt.start, evt.end)"></span>
+                                                    <span x-show="evt.start === selectedDate" class="bg-blue-600 text-white text-[10px] px-1 py-0.5 rounded font-bold">今日開始</span>
+                                                    <span x-show="evt.status === 'pending'" class="text-red-600 font-bold">⚠暫定</span>
+                                                </div>
+                                                <h3 class="font-bold text-gray-800 text-sm leading-snug" x-text="evt.title"></h3>
+                                                <div class="mt-1" x-show="evt.highlight">
+                                                    <span class="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded border border-orange-600 font-bold">★亮點</span>
+                                                </div>
+                                            </div>
+                                            <button @click.stop="editEvent(evt)" class="text-gray-300 hover:text-blue-600 p-1"><i class="fas fa-pen"></i></button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="xl:col-span-1 bg-white rounded-xl shadow-lg border border-gray-200 sticky top-24 h-[calc(100vh-8rem)] flex flex-col">
+                <div class="p-4 border-b bg-orange-50 rounded-t-xl">
+                    <h2 class="font-bold text-orange-900 text-lg flex items-center">
+                        <i class="fas fa-star text-orange-600 mr-2"></i>年度重點亮點
+                    </h2>
+                    <p class="text-xs text-orange-700 mt-1">點擊活動可跳轉至該月份</p>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-2 sidebar-scroll space-y-2">
+                    <template x-for="evt in highlights" :key="evt.id">
+                        <div @click="jumpToEvent(evt)" 
+                             class="bg-white p-3 rounded-lg border hover:border-orange-400 hover:shadow-md cursor-pointer transition group relative"
+                             :class="evt.status === 'pending' ? 'border-l-4 border-l-red-400' : 'border-l-4 border-l-orange-500'">
+                            
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-xs font-bold text-gray-500" x-text="formatDateShort(evt.start)"></span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded font-bold" :class="getUnitTheme(evt.unit).badge" x-text="evt.unit"></span>
+                            </div>
+                            
+                            <h3 class="font-bold text-gray-800 text-sm leading-tight group-hover:text-orange-700" x-text="evt.title"></h3>
+                            
+                            <div class="mt-2 flex gap-1">
+                                <span x-show="evt.status === 'pending'" class="text-[10px] text-red-600 bg-red-50 px-1 rounded border border-red-100">⚠ 暫定</span>
+                                <span x-show="evt.title.includes('市長')" class="text-[10px] text-blue-600 bg-blue-50 px-1 rounded border border-blue-100">市長</span>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <div x-show="highlights.length === 0" class="text-center py-10 text-gray-400 text-sm">
+                        無標記亮點活動
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <button @click="openModal()" class="fixed bottom-6 right-4 sm:right-8 bg-blue-600 hover:bg-blue-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-2xl z-40 transition transform active:scale-95 border-2 border-white">
+        <i class="fas fa-plus"></i>
+    </button>
+    
+    <div x-show="showModal" x-cloak class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all flex flex-col max-h-[90vh]" @click.away="showModal = false">
+            <div class="bg-gray-50 px-5 py-3 border-b flex justify-between items-center">
+                <h3 class="font-bold text-lg text-gray-800" x-text="isEditing ? '編輯行程' : '新增行程'"></h3>
+                <button @click="showModal = false" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-5 space-y-4 overflow-y-auto">
+                 <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">歸類</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" @click="form.category = 'council'" :class="form.category === 'council' ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 border'" class="py-2 border rounded-lg font-medium text-sm">議會</button>
+                        <button type="button" @click="form.category = 'city'" :class="form.category === 'city' ? 'bg-red-600 text-white' : 'bg-white text-gray-600 border'" class="py-2 border rounded-lg font-medium text-sm">市府</button>
+                        <button type="button" @click="form.category = 'bureau'" :class="form.category === 'bureau' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'" class="py-2 border rounded-lg font-medium text-sm">文化局</button>
+                    </div>
+                </div>
+                <div><label class="block text-sm font-bold text-gray-700 mb-1">名稱</label><input type="text" x-model="form.title" class="w-full border p-2 rounded"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-bold text-gray-700 mb-1">開始</label><input type="date" x-model="form.start" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-sm font-bold text-gray-700 mb-1">結束</label><input type="date" x-model="form.end" class="w-full border p-2 rounded"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">單位</label>
+                        <select x-model="form.unit" class="w-full border p-2 rounded">
+                            <option value="文化局">🏛️ 文化局</option><option value="研究">🪻 研究科</option><option value="表藝">💗 表藝科</option><option value="市美">💠 市美館</option><option value="港藝">🌊 港藝中心</option><option value="大墩">🔸 大墩中心</option><option value="葫蘆墩">🌿 葫蘆墩</option><option value="屯藝">🍋 屯藝中心</option><option value="纖維">🧵 纖維館</option><option value="文資">🧱 文資處</option><option value="市圖">📚 市圖書館</option><option value="視覺">🎨 視覺科</option><option value="資源">🤝 資源科</option><option value="秘書">📎 秘書室</option><option value="議會">🟣 議會</option><option value="市府">🔴 市府</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">狀態</label>
+                        <select x-model="form.status" class="w-full border p-2 rounded"><option value="confirmed">✅ 已確認</option><option value="pending">⚠ 暫定</option></select>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 pt-2 p-3 bg-orange-50 rounded" x-show="form.category === 'bureau'"><input type="checkbox" id="highlight" x-model="form.highlight"><label for="highlight" class="text-sm font-bold">標記為重大亮點</label></div>
+            </div>
+            <div class="bg-gray-50 px-5 py-4 border-t flex gap-3">
+                <button x-show="isEditing" @click="deleteEvent()" class="bg-red-100 text-red-700 px-4 py-2 rounded font-bold">刪除</button>
+                <div class="flex-1"></div>
+                <button @click="showModal = false" class="bg-gray-200 px-4 py-2 rounded font-bold">取消</button>
+                <button @click="saveEvent()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function calendarApp() {
+            return {
+                currentDate: new Date(2026, 0, 20),
+                selectedDate: '2026-01-20',
+                showModal: false,
+                isEditing: false,
+                events: [],
+                form: { id: null, title: '', start: '', end: '', category: 'bureau', unit: '文化局', status: 'confirmed', highlight: false },
+                STORAGE_KEY: 'culture_app_v8_dashboard',
+
+                getUnitTheme(unit) {
+                    const themes = {
+                        '研究': { bar: 'bg-violet-100 text-violet-900 border-violet-500', badge: 'bg-violet-100 text-violet-800', cardBorder: 'border-violet-500' },
+                        '表藝': { bar: 'bg-rose-100 text-rose-900 border-rose-500', badge: 'bg-rose-100 text-rose-800', cardBorder: 'border-rose-500' },
+                        '市美': { bar: 'bg-cyan-100 text-cyan-900 border-cyan-500', badge: 'bg-cyan-100 text-cyan-800', cardBorder: 'border-cyan-500' },
+                        '港藝': { bar: 'bg-indigo-100 text-indigo-900 border-indigo-500', badge: 'bg-indigo-100 text-indigo-800', cardBorder: 'border-indigo-500' },
+                        '大墩': { bar: 'bg-amber-100 text-amber-900 border-amber-500', badge: 'bg-amber-100 text-amber-800', cardBorder: 'border-amber-500' },
+                        '葫蘆墩': { bar: 'bg-emerald-100 text-emerald-900 border-emerald-500', badge: 'bg-emerald-100 text-emerald-800', cardBorder: 'border-emerald-500' },
+                        '屯藝': { bar: 'bg-lime-100 text-lime-900 border-lime-500', badge: 'bg-lime-100 text-lime-800', cardBorder: 'border-lime-500' },
+                        '纖維': { bar: 'bg-teal-100 text-teal-900 border-teal-500', badge: 'bg-teal-100 text-teal-800', cardBorder: 'border-teal-500' },
+                        '文資': { bar: 'bg-stone-100 text-stone-900 border-stone-500', badge: 'bg-stone-100 text-stone-800', cardBorder: 'border-stone-500' },
+                        '市圖': { bar: 'bg-sky-100 text-sky-900 border-sky-500', badge: 'bg-sky-100 text-sky-800', cardBorder: 'border-sky-500' },
+                        '資源': { bar: 'bg-blue-100 text-blue-900 border-blue-500', badge: 'bg-blue-100 text-blue-800', cardBorder: 'border-blue-500' },
+                        '視覺': { bar: 'bg-pink-100 text-pink-900 border-pink-500', badge: 'bg-pink-100 text-pink-800', cardBorder: 'border-pink-500' },
+                        '秘書': { bar: 'bg-gray-100 text-gray-900 border-gray-500', badge: 'bg-gray-100 text-gray-800', cardBorder: 'border-gray-500' },
+                        '議會': { bar: 'bg-purple-100 text-purple-900 border-purple-500', badge: 'bg-purple-100 text-purple-800', cardBorder: 'border-purple-500' },
+                        '市府': { bar: 'bg-red-100 text-red-900 border-red-500', badge: 'bg-red-100 text-red-800', cardBorder: 'border-red-500' },
+                        '文化局': { bar: 'bg-gray-100 text-gray-900 border-gray-500', badge: 'bg-gray-100 text-gray-800', cardBorder: 'border-gray-500' }
+                    };
+                    return themes[unit] || themes['文化局'];
+                },
+
+                init() {
+                    const saved = localStorage.getItem(this.STORAGE_KEY);
+                    if (saved) { this.events = JSON.parse(saved); } else { this.loadFullData(); }
+                    if (window.innerWidth < 640) this.resetToToday();
+                },
+
+                loadFullData() {
+                    this.events = [
+                         { id: 101, title: '陳銀輝逝世二週年紀念展', start: '2026-01-10', end: '2026-01-28', category: 'bureau', unit: '文化局', status: 'confirmed', highlight: false },
+                        { id: 102, title: '林智信油畫雕塑個展', start: '2026-01-17', end: '2026-01-17', category: 'bureau', unit: '港藝', status: 'confirmed', highlight: false },
+                        { id: 105, title: '臨時會(一) (局長出席)', start: '2026-01-20', end: '2026-01-20', category: 'council', unit: '議會', status: 'confirmed', highlight: true },
+                        { id: 106, title: '臨時會(二) (局長出席)', start: '2026-01-21', end: '2026-01-21', category: 'council', unit: '議會', status: 'confirmed', highlight: true },
+                        { id: 108, title: '回應典藏品的七個問句特展', start: '2026-01-26', end: '2026-01-26', category: 'bureau', unit: '纖維', status: 'confirmed', highlight: false },
+                        { id: 206, title: '綠美圖戶外燈光藝術展演', start: '2026-02-15', end: '2026-03-03', category: 'bureau', unit: '市美', status: 'confirmed', highlight: true },
+                        { id: 207, title: 'FOCASA幾米馬戲樂園', start: '2026-02-19', end: '2026-02-21', category: 'bureau', unit: '表藝', status: 'confirmed', highlight: true },
+                        { id: 208, title: '臺中媽祖國際觀光文化節', start: '2026-02-20', end: '2026-05-16', category: 'bureau', unit: '表藝', status: 'confirmed', highlight: true },
+                        { id: 303, title: '臺中兒童藝術節 (系列)', start: '2026-03-01', end: '2026-04-30', category: 'bureau', unit: '表藝', status: 'pending', highlight: true },
+                        { id: 308, title: '市政考察 (教文委)', start: '2026-03-16', end: '2026-03-18', category: 'council', unit: '議會', status: 'confirmed', highlight: true },
+                        { id: 309, title: '兒童藝術節 記者會', start: '2026-03-20', end: '2026-03-20', category: 'bureau', unit: '表藝', status: 'pending', highlight: true },
+                        { id: 406, title: '115年臺中文學季', start: '2026-04-18', end: '2026-04-18', category: 'bureau', unit: '研究', status: 'pending', highlight: false },
+                        { id: 407, title: '清眷森活藝術節', start: '2026-04-18', end: '2026-05-10', category: 'bureau', unit: '港藝', status: 'pending', highlight: true },
+                        { id: 504, title: '熱暑人－當代藝術特展', start: '2026-05-15', end: '2026-08-30', category: 'bureau', unit: '市美', status: 'confirmed', highlight: true },
+                        { id: 605, title: '台中夏日馬戲節', start: '2026-06-27', end: '2026-06-28', category: 'bureau', unit: '表藝', status: 'pending', highlight: true },
+                        { id: 1001, title: '大墩美展頒獎典禮', start: '2026-10-24', end: '2026-10-24', category: 'bureau', unit: '視覺', status: 'pending', highlight: true },
+                        { id: 9001, title: '市政會議 (市長主持)', start: '2026-01-20', end: '2026-01-20', category: 'city', unit: '市府', status: 'confirmed', highlight: true },
+                    ];
+                    this.save();
+                },
+                resetData() { if(confirm("確定重置？")) { localStorage.removeItem(this.STORAGE_KEY); this.loadFullData(); location.reload(); } },
+                
+                // 亮點邏輯：只抓文化局(bureau)且標記highlight的，依時間排序
+                get highlights() {
+                    return this.events
+                        .filter(e => e.category === 'bureau' && e.highlight)
+                        .sort((a, b) => new Date(a.start) - new Date(b.start));
+                },
+
+                // 跳轉邏輯
+                jumpToEvent(evt) {
+                    const [y, m, d] = evt.start.split('-');
+                    this.currentDate = new Date(parseInt(y), parseInt(m) - 1, 1);
+                    this.selectedDate = evt.start;
+                },
+
+                // 基礎日曆邏輯 (同前版)
+                get daysInMonth() {
+                    const year = this.currentDate.getFullYear(); const month = this.currentDate.getMonth();
+                    const firstDay = new Date(year, month, 1); const lastDay = new Date(year, month + 1, 0);
+                    const days = []; const startDayOfWeek = firstDay.getDay();
+                    for (let i = 0; i < startDayOfWeek; i++) { const d = new Date(year, month, -i); const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const dayVal = String(d.getDate()).padStart(2, '0'); days.unshift({ dayNum: d.getDate(), dateStr: `${y}-${m}-${dayVal}`, isCurrentMonth: false }); }
+                    for (let i = 1; i <= lastDay.getDate(); i++) { const d = new Date(year, month, i); const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const dayVal = String(d.getDate()).padStart(2, '0'); days.push({ dayNum: i, dateStr: `${y}-${m}-${dayVal}`, isCurrentMonth: true }); }
+                    for (let i = 1; i <= (42 - days.length); i++) { const d = new Date(year, month + 1, i); const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const dayVal = String(d.getDate()).padStart(2, '0'); days.push({ dayNum: i, dateStr: `${y}-${m}-${dayVal}`, isCurrentMonth: false }); }
+                    return days;
+                },
+                changeMonth(step) { this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + step, 1); },
+                resetToToday() { const now = new Date(); const localISOTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10); this.selectedDate = localISOTime; this.currentDate = new Date(2026, 0, 1); }, // 測試用2026
+                formatMonthYear() { return `${this.currentDate.getFullYear()}年 ${this.currentDate.getMonth() + 1}月`; },
+                isToday(dateStr) { return false; },
+                isSelected(dateStr) { return this.selectedDate === dateStr; },
+                selectDate(dateStr) { this.selectedDate = dateStr; },
+                
+                // 排序邏輯：1. 當日開始優先 2. 時間
+                getStartedEventsForDay(dateStr, categoryFilter = null) {
+                    return this.events.filter(e => (categoryFilter ? e.category === categoryFilter : true) && e.start === dateStr);
+                },
+                sortEvents(events) {
+                    return events.sort((a, b) => {
+                        const aStart = a.start === this.selectedDate; const bStart = b.start === this.selectedDate;
+                        if (aStart && !bStart) return -1; if (!aStart && bStart) return 1; return 0;
+                    });
+                },
+                getEventsForDay(dateStr, categoryFilter = null) {
+                    const list = this.events.filter(e => (categoryFilter ? e.category === categoryFilter : true) && dateStr >= e.start && dateStr <= e.end);
+                    return this.sortEvents(list);
+                },
+                get selectedDayEvents() { return { council: this.getEventsForDay(this.selectedDate, 'council'), bureau: this.getEventsForDay(this.selectedDate, 'bureau'), city: this.getEventsForDay(this.selectedDate, 'city') }; },
+                get selectedDateDisplay() { if(!this.selectedDate) return ''; const [y, m, d] = this.selectedDate.split('-'); return `${m}/${d}`; },
+                formatDateRange(start, end) { if (start === end) return start.substring(5); return `${start.substring(5)}~${end.substring(5)}`; },
+                formatDateShort(dateStr) { return dateStr.substring(5).replace('-', '/'); },
+                getEventDisplayText(evt) { return evt.start === evt.end ? evt.title : `${evt.start.substring(5).replace('-','/')}~${evt.end.substring(5).replace('-','/')} ${evt.title}`; },
+                
+                openModal(category = 'bureau') { this.isEditing = false; this.form = { id: Date.now(), title: '', start: this.selectedDate, end: this.selectedDate, category: category, unit: category === 'city' ? '市府' : '文化局', status: 'confirmed', highlight: false }; this.showModal = true; },
+                editEvent(evt) { this.isEditing = true; this.form = JSON.parse(JSON.stringify(evt)); this.showModal = true; },
+                saveEvent() { if (!this.form.title) { alert('請輸入活動名稱'); return; } if (this.isEditing) { const index = this.events.findIndex(e => e.id === this.form.id); if (index !== -1) this.events[index] = this.form; } else { this.events.push(this.form); } this.save(); this.showModal = false; },
+                deleteEvent() { if (confirm('確定要刪除？')) { this.events = this.events.filter(e => e.id !== this.form.id); this.save(); this.showModal = false; } },
+                save() { localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.events)); }
+            }
+        }
+    </script>
+</body>
+</html>
