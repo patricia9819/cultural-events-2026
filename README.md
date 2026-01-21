@@ -201,7 +201,7 @@
 saveData() {
     this.isLoading = true;
     
-    // 這裡一定要用您重新部署後取得的最新網址
+    // [這裡一定要用您重新部署後取得的最新網址](https://script.google.com/macros/s/AKfycbxgA-VXlhcxv0MG4qcIqJkC2zY4pIe6IWCVRlzkfdGDXq98zw81YqM5s0X5gtvzSlg1Mw/exec)
     const url = this.API_URL; 
 
     // 使用 fetch，但不加 headers，讓它變成 "Simple Request"
